@@ -1,34 +1,57 @@
+/**
+ * LinkSwift Desktop - 首次运行向导组件
+ * 
+ * 引导用户完成初始配置，包括登录夸克网盘和配置 RPC 下载器
+ */
+
 import React, { useState } from 'react'
 
+// 向导组件的属性接口
 interface FirstRunWizardProps {
-  onComplete: () => void
-  onLogin: () => Promise<boolean>
-  onTestConnection: (url: string, token?: string) => Promise<boolean>
+  onComplete: () => void                                // 完成回调
+  onLogin: () => Promise<boolean>                      // 登录回调
+  onTestConnection: (url: string, token?: string) => Promise<boolean>  // 测试连接回调
 }
 
+/**
+ * 首次运行向导组件
+ * 包含 3 个步骤：登录、配置 RPC、完成
+ * @param onComplete - 完成后回调
+ * @param onLogin - 登录回调
+ * @param onTestConnection - 测试连接回调
+ */
 export function FirstRunWizard({ onComplete, onLogin, onTestConnection }: FirstRunWizardProps) {
+  // 当前步骤（1-3）
   const [step, setStep] = useState(1)
+  // 是否已登录
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  // RPC 服务器地址
   const [rpcUrl, setRpcUrl] = useState('http://localhost:6800')
+  // RPC 密钥
   const [rpcToken, setRpcToken] = useState('')
+  // 连接是否已测试
   const [connectionTested, setConnectionTested] = useState(false)
 
+  // 处理登录操作
   const handleLogin = async () => {
     const result = await onLogin()
     setIsLoggedIn(result)
   }
 
+  // 处理测试连接操作
   const handleTestConnection = async () => {
     const result = await onTestConnection(rpcUrl, rpcToken || undefined)
     setConnectionTested(result)
   }
 
+  // 判断是否可以进入下一步
   const canGoNext = step === 1 ? isLoggedIn : connectionTested
 
   return (
     <div className="wizard" data-testid="first-run-wizard">
       <h2>欢迎使用 LinkSwift Desktop ({step}/3)</h2>
 
+      {/* 步骤 1：登录夸克网盘 */}
       {step === 1 && (
         <div data-testid="wizard-step-login">
           <h3>登录夸克网盘</h3>
@@ -38,6 +61,7 @@ export function FirstRunWizard({ onComplete, onLogin, onTestConnection }: FirstR
         </div>
       )}
 
+      {/* 步骤 2：配置 RPC 下载器 */}
       {step === 2 && (
         <div data-testid="wizard-step-rpc">
           <h3>配置 RPC 下载器</h3>
@@ -60,6 +84,7 @@ export function FirstRunWizard({ onComplete, onLogin, onTestConnection }: FirstR
         </div>
       )}
 
+      {/* 步骤 3：配置完成 */}
       {step === 3 && (
         <div data-testid="wizard-step-done">
           <h3>配置完成</h3>
@@ -67,6 +92,7 @@ export function FirstRunWizard({ onComplete, onLogin, onTestConnection }: FirstR
         </div>
       )}
 
+      {/* 向导操作按钮 */}
       <div className="wizard-actions">
         {step > 1 && (
           <button onClick={() => setStep(step - 1)} data-testid="wizard-prev">

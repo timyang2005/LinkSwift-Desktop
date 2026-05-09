@@ -1,14 +1,23 @@
+/**
+ * LinkSwift Desktop - 主应用组件
+ * 
+ * 这是应用的主入口组件，负责整体布局和状态展示
+ */
+
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 
+// 主应用组件
 function App() {
+  // 计数器状态，用于演示 React 状态管理
   const [count, setCount] = useState(0)
 
   return (
     <>
+      {/* 中心区域：包含 Logo 和欢迎信息 */}
       <section id="center">
         <div className="hero">
           <img src={heroImg} className="base" width="170" height="179" alt="" />
@@ -21,6 +30,7 @@ function App() {
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
         </div>
+        {/* 计数器按钮，点击可增加计数 */}
         <button
           type="button"
           className="counter"
@@ -30,9 +40,12 @@ function App() {
         </button>
       </section>
 
+      {/* 装饰性分隔线 */}
       <div className="ticks"></div>
 
+      {/* 下一阶段区域：文档和社区链接 */}
       <section id="next-steps">
+        {/* 文档区域 */}
         <div id="docs">
           <svg className="icon" role="presentation" aria-hidden="true">
             <use href="/icons.svg#documentation-icon"></use>
@@ -54,6 +67,8 @@ function App() {
             </li>
           </ul>
         </div>
+
+        {/* 社区连接区域 */}
         <div id="social">
           <svg className="icon" role="presentation" aria-hidden="true">
             <use href="/icons.svg#social-icon"></use>
@@ -113,6 +128,7 @@ function App() {
         </div>
       </section>
 
+      {/* 装饰性分隔线 */}
       <div className="ticks"></div>
       <section id="spacer"></section>
     </>

@@ -1,24 +1,46 @@
+/**
+ * LinkSwift Desktop - 设置组件
+ * 
+ * 提供应用设置界面，包括账号管理和 RPC 下载器配置
+ */
+
 import React, { useState } from 'react'
 import type { RpcServer } from '../types'
 
+// 设置组件的属性接口
 interface SettingsProps {
   config: {
-    credential: { is_valid: boolean; last_verified: number }
-    rpc_servers: RpcServer[]
+    credential: { is_valid: boolean; last_verified: number }  // 登录凭证状态
+    rpc_servers: RpcServer[]                                    // RPC 服务器列表
   }
-  onAddServer: (server: RpcServer) => void
-  onDeleteServer: (id: string) => void
-  onTestConnection: (url: string, token?: string) => Promise<boolean>
-  onReLogin: () => void
+  onAddServer: (server: RpcServer) => void                      // 添加服务器回调
+  onDeleteServer: (id: string) => void                         // 删除服务器回调
+  onTestConnection: (url: string, token?: string) => Promise<boolean>  // 测试连接回调
+  onReLogin: () => void                                        // 重新登录回调
 }
 
+/**
+ * 设置组件
+ * 提供账号管理和 RPC 服务器配置功能
+ * @param config - 当前配置
+ * @param onAddServer - 添加服务器回调
+ * @param onDeleteServer - 删除服务器回调
+ * @param onTestConnection - 测试连接回调
+ * @param onReLogin - 重新登录回调
+ */
 export function Settings({ config, onAddServer, onDeleteServer, onTestConnection, onReLogin }: SettingsProps) {
+  // 新服务器名称
   const [newServerName, setNewServerName] = useState('')
+  // 新服务器地址
   const [newServerUrl, setNewServerUrl] = useState('')
+  // 新服务器密钥
   const [newServerToken, setNewServerToken] = useState('')
+  // 测试结果
   const [testResult, setTestResult] = useState<boolean | null>(null)
+  // 是否正在测试
   const [isTesting, setIsTesting] = useState(false)
 
+  // 添加新的 RPC 服务器
   const handleAddServer = () => {
     if (!newServerName.trim() || !newServerUrl.trim()) return
     onAddServer({
@@ -34,6 +56,7 @@ export function Settings({ config, onAddServer, onDeleteServer, onTestConnection
     setNewServerToken('')
   }
 
+  // 测试连接
   const handleTestConnection = async () => {
     if (!newServerUrl.trim()) return
     setIsTesting(true)
@@ -49,6 +72,7 @@ export function Settings({ config, onAddServer, onDeleteServer, onTestConnection
     <div className="settings" data-testid="settings-panel">
       <h2>设置</h2>
 
+      {/* 账号管理区域 */}
       <section data-testid="credential-section">
         <h3>账号管理</h3>
         <div data-testid="cookie-status">
@@ -57,8 +81,10 @@ export function Settings({ config, onAddServer, onDeleteServer, onTestConnection
         <button onClick={onReLogin} data-testid="re-login-button">重新登录</button>
       </section>
 
+      {/* RPC 下载器配置区域 */}
       <section data-testid="rpc-section">
         <h3>RPC 下载器</h3>
+        {/* 服务器列表 */}
         {config.rpc_servers.map((server) => (
           <div key={server.id} data-testid={`rpc-server-${server.id}`}>
             <span>{server.name} - {server.url}</span>
@@ -68,6 +94,7 @@ export function Settings({ config, onAddServer, onDeleteServer, onTestConnection
           </div>
         ))}
 
+        {/* 添加服务器表单 */}
         <div data-testid="add-server-form">
           <input
             value={newServerName}
@@ -90,6 +117,7 @@ export function Settings({ config, onAddServer, onDeleteServer, onTestConnection
           <button onClick={handleTestConnection} disabled={isTesting} data-testid="test-connection-button">
             {isTesting ? '测试中...' : '测试连接'}
           </button>
+          {/* 测试结果提示 */}
           {testResult !== null && (
             <div data-testid="test-connection-result">
               {testResult ? '✅ 连接成功' : '❌ 连接失败'}
