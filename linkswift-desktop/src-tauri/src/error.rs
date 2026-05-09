@@ -56,4 +56,8 @@ pub enum AppError {
     /// HTTP请求错误
     #[error("HTTP请求错误: {0}")]
     RequestError(#[from] reqwest::Error),
+
+    /// 任务队列操作错误
+    #[error("任务队列错误: {0}")]
+    TaskQueueError(String),
 }

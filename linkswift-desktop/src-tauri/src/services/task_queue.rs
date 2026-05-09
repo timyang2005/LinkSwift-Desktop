@@ -3,73 +3,156 @@
 //! 管理下载任务的队列操作
 
 use crate::error::AppError;
-use crate::models::task::DownloadTask;
+use crate::models::task::{DownloadTask, TaskStatus};
+use std::collections::HashMap;
 
-/// 任务队列
-///
-/// 提供下载任务的队列化管理功能
-pub struct TaskQueue;
+const MAX_RETRY_COUNT: u32 = 3;
+
+#[derive(Debug)]
+pub struct TaskQueue {
+    tasks: HashMap<String, DownloadTask>,
+}
 
 impl TaskQueue {
-    /// 创建新的任务队列
-    ///
-    /// # 返回值
-    /// 新的TaskQueue实例
     pub fn new() -> Self {
-        Self
+        Self {
+            tasks: HashMap::new(),
+        }
     }
 
-    /// 添加任务到队列
-    ///
-    /// 将新的下载任务添加到队列中
-    ///
-    /// # 参数
-    /// * `task` - 要添加的下载任务
-    ///
-    /// # 返回值
-    /// * `Ok(())` - 添加成功
-    /// * `Err(AppError)` - 添加失败
     pub fn add_task(&mut self, task: DownloadTask) -> Result<(), AppError> {
-        todo!()
+        if self.tasks.contains_key(&task.id) {
+            return Err(AppError::TaskQueueError(format!(
+                "Task with id '{}' already exists",
+                task.id
+            )));
+        }
+        
+        for existing_task in self.tasks.values() {
+            if matches!(existing_task.status, TaskStatus::Failed { .. }) {
+                continue;
+            }
+            if existing_task.share_url == task.share_url {
+                return Err(AppError::TaskQueueError(format!(
+                    "Task for share URL '{}' already exists",
+                    task.share_url
+                )));
+            }
+        }
+        
+        self.tasks.insert(task.id.clone(), task);
+        Ok(())
     }
 
-    /// 获取指定任务
-    ///
-    /// 根据任务ID获取任务信息
-    ///
-    /// # 参数
-    /// * `id` - 任务ID
-    ///
-    /// # 返回值
-    /// * `Ok(Option<DownloadTask>)` - 任务信息（如果存在）
-    /// * `Err(AppError)` - 获取失败
     pub fn get_task(&self, id: &str) -> Result<Option<DownloadTask>, AppError> {
-        todo!()
+        Ok(self.tasks.get(id).cloned())
     }
 
-    /// 列出所有任务
-    ///
-    /// 获取队列中的所有下载任务
-    ///
-    /// # 返回值
-    /// * `Ok(Vec<DownloadTask>)` - 任务列表
-    /// * `Err(AppError)` - 获取失败
     pub fn list_tasks(&self) -> Result<Vec<DownloadTask>, AppError> {
-        todo!()
+        Ok(self.tasks.values().cloned().collect())
     }
 
-    /// 更新任务状态
-    ///
-    /// 修改指定任务的状态
-    ///
-    /// # 参数
-    /// * `id` - 任务ID
-    /// * `status` - 新的任务状态
-    ///
-    /// # 返回值
-    /// * `Ok(())` - 更新成功
-    /// * `Err(AppError)` - 更新失败
-    pub fn update_task_status(&mut self, id: &str, status: crate::models::task::TaskStatus) -> Result<(), AppError> {
-        todo!()
+    pub fn update_task_status(&mut self, id: &str, status: TaskStatus) -> Result<(), AppError> {
+        match self.tasks.get_mut(id) {
+            Some(task) => {
+                task.status = status;
+                Ok(())
+            }
+            None => Err(AppError::TaskQueueError(format!(
+                "Task with id '{}' not found",
+                id
+            ))),
+        }
+    }
+
+    pub fn remove_task(&mut self, id: &str) -> Result<(), AppError> {
+        match self.tasks.remove(id) {
+            Some(_) => Ok(()),
+            None => Err(AppError::TaskQueueError(format!(
+                "Task with id '{}' not found",
+                id
+            ))),
+        }
+    }
+
+    pub fn get_pending_tasks(&self) -> Result<Vec<DownloadTask>, AppError> {
+        Ok(self
+            .tasks
+            .values()
+            .filter(|task| matches!(task.status, TaskStatus::Pending))
+            .cloned()
+            .collect())
+    }
+
+    pub fn get_tasks_by_status(&self, status: TaskStatus) -> Result<Vec<DownloadTask>, AppError> {
+        Ok(self
+            .tasks
+            .values()
+            .filter(|task| {
+                match (&task.status, &status) {
+                    (TaskStatus::Transferring { .. }, TaskStatus::Transferring { .. }) => true,
+                    (TaskStatus::Failed { .. }, TaskStatus::Failed { .. }) => true,
+                    _ => task.status == status,
+                }
+            })
+            .cloned()
+            .collect())
+    }
+
+    pub fn increment_retry(&mut self, id: &str) -> Result<(), AppError> {
+        match self.tasks.get_mut(id) {
+            Some(task) => {
+                if task.retry_count >= MAX_RETRY_COUNT {
+                    return Err(AppError::TaskQueueError(format!(
+                        "Maximum retry count ({}) exceeded for task '{}'",
+                        MAX_RETRY_COUNT, id
+                    )));
+                }
+                task.retry_count += 1;
+                Ok(())
+            }
+            None => Err(AppError::TaskQueueError(format!(
+                "Task with id '{}' not found",
+                id
+            ))),
+        }
+    }
+
+    pub fn clear_completed(&mut self) -> Result<usize, AppError> {
+        let count = self
+            .tasks
+            .values()
+            .filter(|task| matches!(task.status, TaskStatus::Completed))
+            .count();
+        
+        self.tasks.retain(|_, task| !matches!(task.status, TaskStatus::Completed));
+        Ok(count)
+    }
+
+    pub fn task_count(&self) -> Result<usize, AppError> {
+        Ok(self.tasks.len())
+    }
+
+    pub fn set_error(&mut self, id: &str, error: &str) -> Result<(), AppError> {
+        match self.tasks.get_mut(id) {
+            Some(task) => {
+                task.error_message = Some(error.to_string());
+                Ok(())
+            }
+            None => Err(AppError::TaskQueueError(format!(
+                "Task with id '{}' not found",
+                id
+            ))),
+        }
+    }
+
+    pub fn task_ids(&self) -> Result<Vec<String>, AppError> {
+        Ok(self.tasks.keys().cloned().collect())
+    }
+}
+
+impl Default for TaskQueue {
+    fn default() -> Self {
+        Self::new()
     }
 }
