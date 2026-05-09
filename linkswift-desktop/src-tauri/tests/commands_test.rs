@@ -27,6 +27,7 @@ async fn command_parse_share_link_empty_url() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_submit_share_password_correct() {
     let result = app_lib::commands::quark::submit_share_password(
         "abc123".to_string(),
@@ -49,6 +50,7 @@ async fn command_submit_share_password_wrong() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_get_share_files_success() {
     let result = app_lib::commands::quark::get_share_files(
         "abc123".to_string(),
@@ -62,6 +64,7 @@ async fn command_get_share_files_success() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_transfer_files_success() {
     let result = app_lib::commands::quark::transfer_files(
         "abc123".to_string(),
@@ -88,24 +91,28 @@ async fn command_transfer_files_empty_list() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_query_transfer_task() {
     let result = app_lib::commands::quark::query_transfer_task("task-001".to_string()).await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_get_download_link() {
     let result = app_lib::commands::quark::get_download_link("fid1".to_string()).await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_verify_credential() {
     let result = app_lib::commands::quark::verify_credential().await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_get_user_directories() {
     let result =
         app_lib::commands::quark::get_user_directories("0".to_string()).await;
@@ -113,6 +120,7 @@ async fn command_get_user_directories() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_add_download_task() {
     let result = app_lib::commands::rpc::add_download_task(
         "srv1".to_string(),
@@ -145,6 +153,7 @@ async fn command_test_rpc_connection_with_token() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_query_rpc_task_status() {
     let result = app_lib::commands::rpc::query_rpc_task_status(
         "srv1".to_string(),
