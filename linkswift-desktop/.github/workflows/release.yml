@@ -1,0 +1,266 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.event.inputs.version }}" != "" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_STRIPPED=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: LinkSwift Desktop ${{ steps.version.outputs.VERSION }}
+          draft: true
+          prerelease: ${{ contains(steps.version.outputs.VERSION, 'alpha') || contains(steps.version.outputs.VERSION, 'beta') || contains(steps.version.outputs.VERSION, 'rc') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-tauri:
+    name: Build ${{ matrix.platform.os }} (${{ matrix.platform.arch }})
+    needs: create-release
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            runner: ubuntu-22.04
+            arch: x64
+            bundle: [deb, appimage]
+          - os: windows-latest
+            runner: windows-2022
+            arch: x64
+            bundle: [msi, nsis]
+          - os: macos-latest
+            runner: macos-14
+            arch: x64
+            bundle: [app, dmg]
+          - os: macos-latest
+            runner: macos-14
+            arch: arm64
+            bundle: [app, dmg]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            rpm
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.arch == 'arm64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}
+          components: rustfmt, clippy
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ matrix.platform.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.platform.os }}-cargo-
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          bundleName: LinkSwift-Desktop
+          bundleVersion: ${{ needs.create-release.outputs.VERSION_STRIPPED }}
+          bundleFormats: ${{ join(matrix.platform.bundle, ',') }}
+
+  build-portable:
+    name: Build Portable (${{ matrix.platform.os }})
+    needs: create-release
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            runner: ubuntu-22.04
+            ext: tar.gz
+          - os: windows-latest
+            runner: windows-2022
+            ext: zip
+          - os: macos-latest
+            runner: macos-14
+            ext: tar.gz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ matrix.platform.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.platform.os }}-cargo-
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.event.inputs.version }}" != "" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_STRIPPED=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Build Tauri (portable)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          bundleName: LinkSwift-Desktop
+          bundleVersion: ${{ needs.create-release.outputs.VERSION_STRIPPED }}
+          bundleFormats: ${{ matrix.platform.ext == 'zip' && 'zip' || 'none' }}
+          includeDsym: false
+          args: --no-bundle
+
+      - name: Package portable
+        if: matrix.platform.ext != 'zip'
+        shell: bash
+        run: |
+          cd src-tauri/target/release/bundle
+          ls -la
+          for dir in */; do
+            if [ -d "$dir" ]; then
+              base_name="${dir%/}"
+              cd "$dir"
+              tar -czvf "../../../../LinkSwift-Desktop-${{ needs.create-release.outputs.VERSION_STRIPPED }}-${base_name}.${{ matrix.platform.ext }}" *
+              cd ..
+            fi
+          done
+
+      - name: Upload portable artifact
+        uses: actions/upload-release-artifact@v4
+        with:
+          release_id: ${{ needs.create-release.outputs.release_id }}
+          artifact_name: LinkSwift-Desktop-${{ matrix.platform.os }}-portable
+          path: |
+            src-tauri/target/release/bundle/**/*.zip
+            src-tauri/target/release/bundle/**/**/*.tar.gz
+          retention-days: 30
+
+  release-summary:
+    name: Release Summary
+    needs: [create-release, build-tauri, build-portable]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## Release Build Complete! 🎉"
+          echo ""
+          echo "All artifacts have been uploaded to the draft release."
+          echo ""
+          echo "### Next Steps:"
+          echo "1. Go to your draft release"
+          echo "2. Review and edit the release notes"
+          echo "3. Uncheck 'This is a pre-release' if applicable"
+          echo "4. Click 'Publish release'"

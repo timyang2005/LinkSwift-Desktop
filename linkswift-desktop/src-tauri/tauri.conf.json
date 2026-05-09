@@ -2,30 +2,34 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "LinkSwift Desktop",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.linkswift.desktop",
   "build": {
-    "frontendDist": "../build",
+    "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
+    "beforeBuildCommand": "pnpm build",
+    "devtools": true
   },
   "app": {
     "windows": [
       {
         "title": "LinkSwift Desktop",
-        "width": 800,
-        "height": 600,
+        "width": 900,
+        "height": 650,
+        "minWidth": 700,
+        "minHeight": 500,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "center": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://drive-pc.quark.cn https://mobile-pc.quark.cn https://战力澎友圈 https://blog.csdn.net"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["msi", "nsis", "deb", "appimage", "dmg", "app"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -33,8 +37,55 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "android": {
-      "debugApplicationIdSuffix": ".debug"
+    "resources": [],
+    "copyright": "Copyright © 2024 LinkSwift",
+    "category": "Utility",
+    "shortDescription": "网盘分享链接转存与RPC下载工具",
+    "longDescription": "LinkSwift Desktop 是一款简洁高效的网盘分享链接转换工具，支持将夸克网盘分享链接转换为 RPC 下载任务，方便用户使用 Aria2 等下载工具进行高速下载。",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": null,
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": null,
+        "sidebarImage": null,
+        "license": null,
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"]
+      }
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libayatana-appindicator3-1"]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "frameworks": [],
+      "entitlements": null
+    }
+  },
+  "plugins": {
+    "log": {
+      "level": "info",
+      "rotation": {
+        "maxFiles": 5,
+        "maxSize": 5242880
+      },
+      "targets": [
+        {
+          "kind": "Stdout"
+        },
+        {
+          "kind": "LogDir",
+          "filter": "info"
+        }
+      ]
     }
   }
 }
