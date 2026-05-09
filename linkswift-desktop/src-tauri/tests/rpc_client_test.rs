@@ -2,149 +2,164 @@ use app_lib::services::rpc_client::{RpcClient, RpcTaskStatus};
 use app_lib::models::config::DownloaderType;
 use pretty_assertions::assert_eq;
 
-fn create_test_server(body: &str) -> (mockito::Mock, String) {
-    let mut server = mockito::Server::new();
-    let _mock = server.mock("POST", "/jsonrpc")
+#[tokio::test]
+async fn aria2_add_uri_returns_gid() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(body);
-    (mock, server.url())
-}
-
-#[test]
-fn aria2_add_uri_returns_gid() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":"2089b05ecca3d829"}"#);
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":"2089b05ecca3d829"}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.add_uri(vec!["http://example.com/file.mp4"], "file.mp4", None).await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.add_uri(vec!["http://example.com/file.mp4"], "file.mp4", None).await;
     
-    assert!(result.is_ok(), "add_uri should succeed");
+    assert!(result.is_ok());
     assert_eq!(result.unwrap(), "2089b05ecca3d829");
 }
 
-#[test]
-fn aria2_add_uri_with_token() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":"abc123gid"}"#);
+#[tokio::test]
+async fn aria2_add_uri_with_token() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":"abc123gid"}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, Some("my_secret_token"));
-        client.add_uri(vec!["http://example.com/file.mp4"], "file.mp4", None).await
-    });
-    
-    assert!(result.is_ok());
-}
-
-#[test]
-fn aria2_add_uri_with_download_dir() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":"gid_with_dir"}"#);
-    
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.add_uri(vec!["http://example.com/file.mp4"], "file.mp4", Some("D:\\Downloads")).await
-    });
+    let client = RpcClient::new(&server.url(), Some("my_secret_token"));
+    let result = client.add_uri(vec!["http://example.com/file.mp4"], "file.mp4", None).await;
     
     assert!(result.is_ok());
 }
 
-#[test]
-fn aria2_add_multiple_urls() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":"multi_gid"}"#);
+#[tokio::test]
+async fn aria2_add_uri_with_download_dir() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":"gid_with_dir"}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.add_uri(
-            vec!["http://example.com/file1.mp4", "http://example.com/file2.mp4"],
-            "files",
-            None,
-        ).await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.add_uri(vec!["http://example.com/file.mp4"], "file.mp4", Some("D:\\Downloads")).await;
     
     assert!(result.is_ok());
 }
 
-#[test]
-fn aria2_connection_test_success() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":{"version":"1.37.0"}}"#);
+#[tokio::test]
+async fn aria2_add_multiple_urls() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":"multi_gid"}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.test_connection().await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.add_uri(
+        vec!["http://example.com/file1.mp4", "http://example.com/file2.mp4"],
+        "files",
+        None,
+    ).await;
+    
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn aria2_connection_test_success() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":{"version":"1.37.0"}}"#)
+        .create_async()
+        .await;
+    
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.test_connection().await;
     
     assert!(result.is_ok());
     assert!(result.unwrap());
 }
 
-#[test]
-fn aria2_connection_test_failure() {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new("http://nonexistent-host.invalid:99999", None);
-        client.test_connection().await
-    });
+#[tokio::test]
+async fn aria2_connection_test_failure() {
+    let client = RpcClient::new("http://nonexistent-host.invalid:99999", None);
+    let result = client.test_connection().await;
     
     assert!(result.is_ok());
     assert!(!result.unwrap());
 }
 
-#[test]
-fn aria2_connection_test_unauthorized() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","error":{"code":1,"message":"Unauthorized"}}"#);
+#[tokio::test]
+async fn aria2_connection_test_unauthorized() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","error":{"code":1,"message":"Unauthorized"}}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, Some("wrong_token"));
-        client.test_connection().await
-    });
+    let client = RpcClient::new(&server.url(), Some("wrong_token"));
+    let result = client.test_connection().await;
     
     assert!(result.is_ok());
     assert!(!result.unwrap());
 }
 
-#[test]
-fn aria2_query_task_status_active() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"active","totalLength":"1073741824","completedLength":"536870912"}}"#);
+#[tokio::test]
+async fn aria2_query_task_status_active() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"active","totalLength":"1073741824","completedLength":"536870912"}}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.query_task_status("2089b05ecca3d829").await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.query_task_status("2089b05ecca3d829").await;
     
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), RpcTaskStatus::Active);
 }
 
-#[test]
-fn aria2_query_task_status_complete() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"complete","totalLength":"1073741824","completedLength":"1073741824"}}"#);
+#[tokio::test]
+async fn aria2_query_task_status_complete() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"complete","totalLength":"1073741824","completedLength":"1073741824"}}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.query_task_status("gid_complete").await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.query_task_status("gid_complete").await;
     
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), RpcTaskStatus::Complete);
 }
 
-#[test]
-fn aria2_query_task_status_error() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"error","errorCode":"1","errorMessage":"Download aborted"}}"#);
+#[tokio::test]
+async fn aria2_query_task_status_error() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"error","errorCode":"1","errorMessage":"Download aborted"}}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.query_task_status("gid_error").await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.query_task_status("gid_error").await;
     
     assert!(result.is_ok());
     match result.unwrap() {
@@ -155,75 +170,76 @@ fn aria2_query_task_status_error() {
     }
 }
 
-#[test]
-fn aria2_query_task_status_waiting() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"waiting"}}"#);
+#[tokio::test]
+async fn aria2_query_task_status_waiting() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"waiting"}}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.query_task_status("gid_waiting").await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.query_task_status("gid_waiting").await;
     
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), RpcTaskStatus::Waiting);
 }
 
-#[test]
-fn aria2_query_task_status_paused() {
-    let (mock, url) = create_test_server(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"paused"}}"#);
+#[tokio::test]
+async fn aria2_query_task_status_paused() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"id":"1","jsonrpc":"2.0","result":{"status":"paused"}}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&url, None);
-        client.query_task_status("gid_paused").await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.query_task_status("gid_paused").await;
     
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), RpcTaskStatus::Paused);
 }
 
-#[test]
-fn aria2_add_uri_server_error() {
-    let mut server = mockito::Server::new();
-    let _mock = server.mock("POST", "/jsonrpc")
+#[tokio::test]
+async fn aria2_add_uri_server_error() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
         .with_status(500)
-        .with_body("Internal Server Error");
+        .with_body("Internal Server Error")
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&server.url(), None);
-        client.add_uri(vec!["http://example.com/file.mp4"], "file.mp4", None).await
-    });
+    let client = RpcClient::new(&server.url(), None);
+    let result = client.add_uri(vec!["http://example.com/file.mp4"], "file.mp4", None).await;
     
     assert!(result.is_err());
 }
 
-#[test]
-fn rpc_client_with_bitcomet_type() {
-    let mut server = mockito::Server::new();
-    let _mock = server.mock("POST", "/")
+#[tokio::test]
+async fn rpc_client_with_bitcomet_type() {
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server.mock("POST", mockito::Matcher::Any)
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(r#"{"result":0}"#);
+        .with_body(r#"{"result":0}"#)
+        .create_async()
+        .await;
     
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new(&server.url(), None)
-            .with_downloader_type(DownloaderType::BitComet);
-        client.test_connection().await
-    });
+    let client = RpcClient::new(&server.url(), None)
+        .with_downloader_type(DownloaderType::BitComet);
+    let result = client.test_connection().await;
     
     assert!(result.is_ok());
 }
 
-#[test]
-fn rpc_client_connection_refused() {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        let client = RpcClient::new("http://127.0.0.1:1", None);
-        client.test_connection().await
-    });
+#[tokio::test]
+async fn rpc_client_connection_refused() {
+    let client = RpcClient::new("http://127.0.0.1:1", None);
+    let result = client.test_connection().await;
     
     assert!(result.is_ok());
     assert!(!result.unwrap());
