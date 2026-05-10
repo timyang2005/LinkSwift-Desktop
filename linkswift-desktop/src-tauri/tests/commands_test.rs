@@ -189,6 +189,17 @@ async fn command_add_rpc_server() {
 async fn command_update_rpc_server() {
     let server = app_lib::models::config::RpcServer {
         id: "srv1".to_string(),
+        name: "Aria2".to_string(),
+        url: "http://localhost:6800".to_string(),
+        token: None,
+        downloader_type: app_lib::models::config::DownloaderType::Aria2,
+        download_dir: None,
+        is_default: true,
+    };
+    let _ = app_lib::commands::config::add_rpc_server(server).await;
+
+    let updated_server = app_lib::models::config::RpcServer {
+        id: "srv1".to_string(),
         name: "Aria2 Updated".to_string(),
         url: "http://newhost:6800".to_string(),
         token: Some("token123".to_string()),
@@ -196,7 +207,7 @@ async fn command_update_rpc_server() {
         download_dir: Some("/downloads".to_string()),
         is_default: true,
     };
-    let result = app_lib::commands::config::update_rpc_server(server).await;
+    let result = app_lib::commands::config::update_rpc_server(updated_server).await;
     assert!(result.is_ok());
 }
 
@@ -233,6 +244,9 @@ async fn command_open_login_window() {
 
 #[tokio::test]
 async fn command_verify_credential_status() {
+    let config = app_lib::models::config::AppConfig::default();
+    let _ = app_lib::commands::config::save_config(config).await;
+
     let result = app_lib::commands::auth::verify_credential_status().await;
     assert!(result.is_ok());
 }
