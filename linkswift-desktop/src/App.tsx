@@ -1,137 +1,150 @@
-/**
- * LinkSwift Desktop - 主应用组件
- * 
- * 这是应用的主入口组件，负责整体布局和状态展示
- */
-
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import type { ShareInfo, FileItem } from './types'
+import { useAppStore } from './stores/appStore'
+import { LinkInput } from './components/LinkInput'
+import { FileList } from './components/FileList'
+import { TaskQueue } from './components/TaskQueue'
+import { Settings } from './components/Settings'
+import { FirstRunWizard } from './components/FirstRunWizard'
 import './App.css'
 
-// 主应用组件
 function App() {
-  // 计数器状态，用于演示 React 状态管理
-  const [count, setCount] = useState(0)
+  const {
+    config,
+    shareInfo,
+    taskQueue,
+    isLoading,
+    setShareInfo,
+    toggleFileSelection,
+    selectAllFiles,
+    deselectAllFiles,
+    removeTask,
+    updateTaskStatus,
+    setLoading,
+    setError,
+    setFirstRunComplete,
+    addRpcServer,
+    removeRpcServer,
+  } = useAppStore()
+
+  const [showSettings, setShowSettings] = useState(false)
+
+  const handleParse = async (url: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      const result = await invoke<ShareInfo>('parse_share_url', { url })
+      setShareInfo(result)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLogin = async (): Promise<boolean> => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('login_quark')
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const handleTestConnection = async (url: string, token?: string): Promise<boolean> => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('test_rpc_connection', { url, token: token || null })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const handleRetry = async (id: string) => {
+    updateTaskStatus(id, { type: 'Pending' })
+  }
+
+  const handleExpand = async (fid: string) => {
+    if (!shareInfo) return
+    setLoading(true)
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      const result = await invoke<{ items: FileItem[] }>('get_share_files', {
+        pwdId: shareInfo.pwd_id,
+        pdirFid: fid,
+      })
+      const newFiles = result.items || []
+      setShareInfo({
+        ...shareInfo,
+        files: [...shareInfo.files, ...newFiles],
+      })
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (config.is_first_run) {
+    return (
+      <div className="app">
+        <FirstRunWizard
+          onComplete={setFirstRunComplete}
+          onLogin={handleLogin}
+          onTestConnection={handleTestConnection}
+        />
+      </div>
+    )
+  }
 
   return (
-    <>
-      {/* 中心区域：包含 Logo 和欢迎信息 */}
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        {/* 计数器按钮，点击可增加计数 */}
+    <div className="app">
+      <header className="app-header">
+        <h1>LinkSwift Desktop</h1>
         <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          className="settings-toggle"
+          onClick={() => setShowSettings(!showSettings)}
+          data-testid="settings-toggle"
         >
-          Count is {count}
+          {showSettings ? '返回' : '设置'}
         </button>
-      </section>
+      </header>
 
-      {/* 装饰性分隔线 */}
-      <div className="ticks"></div>
+      {showSettings ? (
+        <Settings
+          config={config}
+          onAddServer={addRpcServer}
+          onDeleteServer={removeRpcServer}
+          onTestConnection={handleTestConnection}
+          onReLogin={handleLogin}
+        />
+      ) : (
+        <main className="app-main">
+          <LinkInput onParse={handleParse} isLoading={isLoading} />
 
-      {/* 下一阶段区域：文档和社区链接 */}
-      <section id="next-steps">
-        {/* 文档区域 */}
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
+          {shareInfo && (
+            <FileList
+              files={shareInfo.files}
+              onToggle={toggleFileSelection}
+              onSelectAll={selectAllFiles}
+              onDeselectAll={deselectAllFiles}
+              onExpand={handleExpand}
+            />
+          )}
 
-        {/* 社区连接区域 */}
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      {/* 装饰性分隔线 */}
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          {taskQueue.length > 0 && (
+            <TaskQueue
+              tasks={taskQueue}
+              onRetry={handleRetry}
+              onRemove={removeTask}
+            />
+          )}
+        </main>
+      )}
+    </div>
   )
 }
 
