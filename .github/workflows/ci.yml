@@ -95,7 +95,7 @@ jobs:
 
       - name: Run tests
         working-directory: linkswift-desktop/src-tauri
-        run: cargo test -- --nocapture
+        run: cargo test -- --nocapture --test-threads=1
 
   rust-test-windows:
     name: Rust Test (Windows)
@@ -120,7 +120,7 @@ jobs:
 
       - name: Run tests
         working-directory: linkswift-desktop/src-tauri
-        run: cargo test -- --nocapture
+        run: cargo test -- --nocapture --test-threads=1
 
   rust-test-macos:
     name: Rust Test (macOS)
@@ -145,4 +145,4 @@ jobs:
 
       - name: Run tests
         working-directory: linkswift-desktop/src-tauri
-        run: cargo test -- --nocapture
+        run: cargo test -- --nocapture --test-threads=1
