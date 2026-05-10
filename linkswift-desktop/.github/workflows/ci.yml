@@ -136,13 +136,3 @@ jobs:
       - name: Run tests
         working-directory: src-tauri
         run: cargo test -- --nocapture
-
-  test-summary:
-    name: Test Summary
-    needs: [frontend-test, rust-test, rust-test-windows, rust-test-macos]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Check all jobs status
-        run: |
-          echo "All tests completed!"

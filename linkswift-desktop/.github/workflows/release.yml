@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create_release.outputs.id }}
+      version: ${{ steps.version.outputs.VERSION_STRIPPED }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,29 +49,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-tauri:
-    name: Build ${{ matrix.platform.os }} (${{ matrix.platform.arch }})
+    name: Build ${{ matrix.platform.label }}
     needs: create-release
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - os: ubuntu-latest
-            runner: ubuntu-22.04
-            arch: x64
-            bundle: [deb, appimage]
-          - os: windows-latest
-            runner: windows-2022
-            arch: x64
-            bundle: [msi, nsis]
-          - os: macos-latest
-            runner: macos-14
-            arch: x64
-            bundle: [app, dmg]
-          - os: macos-latest
-            runner: macos-14
-            arch: arm64
-            bundle: [app, dmg]
+          - { os: ubuntu-latest, runner: ubuntu-22.04, label: Ubuntu x64, bundle: 'deb,appimage' }
+          - { os: windows-latest, runner: windows-2022, label: Windows x64, bundle: 'msi,nsis' }
+          - { os: macos-latest, runner: macos-14, label: macOS x64, bundle: 'app,dmg' }
+          - { os: macos-latest, runner: macos-14, label: macOS ARM64, arch: 'aarch64', bundle: 'app,dmg' }
 
     steps:
       - name: Checkout
@@ -106,7 +95,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform.arch == 'arm64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}
+          targets: ${{ matrix.platform.arch == 'aarch64' && 'aarch64-apple-darwin' || '' }}
           components: rustfmt, clippy
 
       - name: Cache cargo build
@@ -126,31 +115,23 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           bundleName: LinkSwift-Desktop
-          bundleVersion: ${{ needs.create-release.outputs.VERSION_STRIPPED }}
-          bundleFormats: ${{ join(matrix.platform.bundle, ',') }}
+          bundleVersion: ${{ needs.create-release.outputs.version }}
+          bundleFormats: ${{ matrix.platform.bundle }}
 
   build-portable:
-    name: Build Portable (${{ matrix.platform.os }})
+    name: Build Portable ${{ matrix.platform.label }}
     needs: create-release
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - os: ubuntu-latest
-            runner: ubuntu-22.04
-            ext: tar.gz
-          - os: windows-latest
-            runner: windows-2022
-            ext: zip
-          - os: macos-latest
-            runner: macos-14
-            ext: tar.gz
+          - { os: ubuntu-latest, runner: ubuntu-22.04, label: Ubuntu, ext: tar.gz }
+          - { os: windows-latest, runner: windows-2022, label: Windows, ext: zip }
+          - { os: macos-latest, runner: macos-14, label: macOS, ext: tar.gz }
 
     steps:
       - name: Checkout
@@ -198,69 +179,64 @@ jobs:
           restore-keys: |
             ${{ matrix.platform.os }}-cargo-
 
-      - name: Get version
-        id: version
-        run: |
-          if [[ "${{ github.event.inputs.version }}" != "" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF#refs/tags/}"
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "VERSION_STRIPPED=${VERSION#v}" >> $GITHUB_OUTPUT
-
-      - name: Build Tauri (portable)
+      - name: Build Tauri (no bundle - portable)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           bundleName: LinkSwift-Desktop
-          bundleVersion: ${{ needs.create-release.outputs.VERSION_STRIPPED }}
-          bundleFormats: ${{ matrix.platform.ext == 'zip' && 'zip' || 'none' }}
-          includeDsym: false
+          bundleVersion: ${{ needs.create-release.outputs.version }}
           args: --no-bundle
 
-      - name: Package portable
-        if: matrix.platform.ext != 'zip'
+      - name: Package portable Linux/macOS
+        if: matrix.platform.ext == 'tar.gz'
         shell: bash
         run: |
           cd src-tauri/target/release/bundle
-          ls -la
           for dir in */; do
-            if [ -d "$dir" ]; then
+            if [ -d "$dir" ] && [ -f "../../linkswift-desktop" ]; then
               base_name="${dir%/}"
+              echo "Packaging $base_name..."
               cd "$dir"
-              tar -czvf "../../../../LinkSwift-Desktop-${{ needs.create-release.outputs.VERSION_STRIPPED }}-${base_name}.${{ matrix.platform.ext }}" *
+              tar -czvf "../../../../LinkSwift-Desktop-${{ needs.create-release.outputs.version }}-${base_name}.tar.gz" *
               cd ..
             fi
           done
+          cd ../..
+          if [ -f "linkswift-desktop" ]; then
+            tar -czvf "LinkSwift-Desktop-${{ needs.create-release.outputs.version }}-portable.tar.gz" linkswift-desktop
+          fi
+          ls -la *.tar.gz *.zip 2>/dev/null || echo "No portable archives created"
+
+      - name: Package portable Windows
+        if: matrix.platform.ext == 'zip'
+        shell: pwsh
+        run: |
+          $version = "${{ needs.create-release.outputs.version }}"
+          $bundleDir = "src-tauri\target\release\bundle"
+          Get-ChildItem $bundleDir -Directory | ForEach-Object {
+            $baseName = $_.Name
+            if (Test-Path "src-tauri\target\release\linkswift-desktop.exe") {
+              Compress-Archive -Path "src-tauri\target\release\linkswift-desktop.exe" -DestinationPath "LinkSwift-Desktop-$version-portable.zip" -Force
+            }
+          }
+          Get-ChildItem *.zip | ForEach-Object { Write-Host "Created: $_" }
 
       - name: Upload portable artifact
-        uses: actions/upload-release-artifact@v4
+        uses: actions/upload-release-asset@v1
         with:
           release_id: ${{ needs.create-release.outputs.release_id }}
-          artifact_name: LinkSwift-Desktop-${{ matrix.platform.os }}-portable
-          path: |
-            src-tauri/target/release/bundle/**/*.zip
-            src-tauri/target/release/bundle/**/**/*.tar.gz
-          retention-days: 30
+          upload_url: ${{ needs.create-release.outputs.release_id }}
+          asset_path: src-tauri/target/release/bundle/**/*.tar.gz
+          asset_name: LinkSwift-Desktop-${{ needs.create-release.outputs.version }}-${{ matrix.platform.label }}-portable.tar.gz
+        if: matrix.platform.ext == 'tar.gz'
 
-  release-summary:
-    name: Release Summary
-    needs: [create-release, build-tauri, build-portable]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Summary
-        run: |
-          echo "## Release Build Complete! 🎉"
-          echo ""
-          echo "All artifacts have been uploaded to the draft release."
-          echo ""
-          echo "### Next Steps:"
-          echo "1. Go to your draft release"
-          echo "2. Review and edit the release notes"
-          echo "3. Uncheck 'This is a pre-release' if applicable"
-          echo "4. Click 'Publish release'"
+      - name: Upload portable Windows
+        uses: actions/upload-release-asset@v1
+        with:
+          release_id: ${{ needs.create-release.outputs.release_id }}
+          upload_url: ${{ needs.create-release.outputs.release_id }}
+          asset_path: LinkSwift-Desktop-${{ needs.create-release.outputs.version }}-portable.zip
+          asset_name: LinkSwift-Desktop-${{ needs.create-release.outputs.version }}-Windows-portable.zip
+        if: matrix.platform.ext == 'zip'
