@@ -66,8 +66,8 @@ jobs:
         platform:
           - { runner: ubuntu-22.04, label: Linux-x64, bundle: 'deb,appimage' }
           - { runner: windows-2022, label: Windows-x64, bundle: 'msi,nsis' }
-          - { runner: macos-14, label: macOS-x64, bundle: 'app,dmg', target: '' }
-          - { runner: macos-14, label: macOS-ARM64, bundle: 'app,dmg', target: 'aarch64-apple-darwin' }
+          - { runner: macos-14, label: macOS-x64, bundle: 'dmg', target: '' }
+          - { runner: macos-14, label: macOS-ARM64, bundle: 'dmg', target: 'aarch64-apple-darwin' }
 
     steps:
       - name: Checkout
@@ -127,13 +127,6 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           tagName: ${{ needs.create-release.outputs.version_tag }}
           releaseName: LinkSwift Desktop ${{ needs.create-release.outputs.version_tag }}
-          releaseBody: |
-            ## LinkSwift Desktop ${{ needs.create-release.outputs.version_tag }}
-
-            ### 安装包下载
-            - **Windows**: 下载 `.msi` 或 `.exe` (NSIS) 安装包
-            - **Linux**: 下载 `.deb` (Debian/Ubuntu) 或 `.AppImage` (通用) 安装包
-            - **macOS**: 下载 `.dmg` 安装包
           releaseDraft: true
           prerelease: false
           bundleName: LinkSwift-Desktop
@@ -141,9 +134,111 @@ jobs:
           bundleFormats: ${{ matrix.platform.bundle }}
           args: ${{ matrix.platform.target && format('--target {0}', matrix.platform.target) || '' }}
 
+  build-portable:
+    name: Portable ${{ matrix.platform.label }}
+    needs: create-release
+    runs-on: ${{ matrix.platform.runner }}
+    defaults:
+      run:
+        working-directory: linkswift-desktop
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { runner: ubuntu-22.04, label: Linux-x64, target: '', ext: '', archive: 'tar.gz' }
+          - { runner: windows-2022, label: Windows-x64, target: '', ext: '.exe', archive: 'zip' }
+          - { runner: macos-14, label: macOS-ARM64, target: 'aarch64-apple-darwin', ext: '', archive: 'tar.gz' }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: linkswift-desktop/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            linkswift-desktop/src-tauri/target/
+          key: ${{ runner.os }}-cargo-portable-${{ hashFiles('linkswift-desktop/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-portable-
+
+      - name: Build portable binary
+        working-directory: linkswift-desktop/src-tauri
+        run: |
+          cargo build --release ${{ matrix.platform.target && format('--target {0}', matrix.platform.target) || '' }}
+
+      - name: Package portable (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          LABEL="${{ matrix.platform.label }}"
+          if [ -n "${{ matrix.platform.target }}" ]; then
+            BINARY_PATH="src-tauri/target/${{ matrix.platform.target }}/release/linkswift-desktop"
+          else
+            BINARY_PATH="src-tauri/target/release/linkswift-desktop"
+          fi
+          ARCHIVE_NAME="LinkSwift-Desktop_${VERSION}_${LABEL}_portable.tar.gz"
+          cp "$BINARY_PATH" linkswift-desktop
+          tar czf "$ARCHIVE_NAME" linkswift-desktop
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
+
+      - name: Package portable (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $VERSION = "${{ needs.create-release.outputs.version }}"
+          $LABEL = "${{ matrix.platform.label }}"
+          $BINARY_PATH = "src-tauri\target\release\linkswift-desktop.exe"
+          $ARCHIVE_NAME = "LinkSwift-Desktop_${VERSION}_${LABEL}_portable.zip"
+          Compress-Archive -Path $BINARY_PATH -DestinationPath $ARCHIVE_NAME
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $env:GITHUB_ENV
+
+      - name: Upload portable archive
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.create-release.outputs.version_tag }}
+          files: ${{ env.ARCHIVE_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   publish-release:
     name: Publish Release
-    needs: [create-release, build-tauri]
+    needs: [create-release, build-tauri, build-portable]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
