@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  frontend-test:
+    name: Frontend Test (Node.js ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linkswift-desktop
+    strategy:
+      matrix:
+        node: ['20', '22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'pnpm'
+          cache-dependency-path: linkswift-desktop/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run TypeScript check
+        run: pnpm exec tsc --noEmit
+
+      - name: Run ESLint
+        run: pnpm lint
+
+      - name: Run Vitest
+        run: pnpm test
+
+  rust-test:
+    name: Rust Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linkswift-desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: linkswift-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('linkswift-desktop/src-tauri/Cargo.lock') }}
+
+      - name: Check formatting
+        working-directory: linkswift-desktop/src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        working-directory: linkswift-desktop/src-tauri
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        working-directory: linkswift-desktop/src-tauri
+        run: cargo test -- --nocapture
+
+  rust-test-windows:
+    name: Rust Test (Windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: linkswift-desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: linkswift-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('linkswift-desktop/src-tauri/Cargo.lock') }}
+
+      - name: Run tests
+        working-directory: linkswift-desktop/src-tauri
+        run: cargo test -- --nocapture
+
+  rust-test-macos:
+    name: Rust Test (macOS)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: linkswift-desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: brew install webkitgtk
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: linkswift-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('linkswift-desktop/src-tauri/Cargo.lock') }}
+
+      - name: Run tests
+        working-directory: linkswift-desktop/src-tauri
+        run: cargo test -- --nocapture
