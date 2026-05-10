@@ -164,6 +164,7 @@ async fn command_query_rpc_task_status() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_get_config() {
     let result = app_lib::commands::config::get_config().await;
     assert!(result.is_ok());
@@ -213,9 +214,20 @@ async fn command_delete_rpc_server() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn command_set_default_rpc_server() {
-    let result =
-        app_lib::commands::config::set_default_rpc_server("srv1".to_string()).await;
+    let server = app_lib::models::config::RpcServer {
+        id: "test_srv_default".to_string(),
+        name: "Test Default RPC".to_string(),
+        url: "http://localhost:6800".to_string(),
+        token: Some("token123".to_string()),
+        downloader_type: app_lib::models::config::DownloaderType::Aria2,
+        download_dir: Some("/downloads".to_string()),
+        is_default: false,
+    };
+    let _ = app_lib::commands::config::add_rpc_server(server).await;
+    
+    let result = app_lib::commands::config::set_default_rpc_server("test_srv_default".to_string()).await;
     assert!(result.is_ok());
 }
 

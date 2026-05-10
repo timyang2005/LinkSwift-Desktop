@@ -7,8 +7,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
-    "devtools": true
+    "beforeBuildCommand": "pnpm build"
   },
   "app": {
     "windows": [
@@ -51,7 +50,6 @@
         "installerIcon": "icons/icon.ico",
         "headerImage": null,
         "sidebarImage": null,
-        "license": null,
         "installMode": "currentUser",
         "languages": ["SimpChinese", "English"]
       }

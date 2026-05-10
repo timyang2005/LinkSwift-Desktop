@@ -66,6 +66,7 @@ pub async fn set_default_rpc_server(server_id: String) -> Result<(), String> {
     let mut config = ConfigService::load(&config_path)
         .map_err(|e| e.to_string())?;
     
+    let mut found = false;
     for (idx, server) in config.rpc_servers.iter().enumerate() {
         if server.id == server_id {
             for s in &mut config.rpc_servers {
@@ -73,8 +74,13 @@ pub async fn set_default_rpc_server(server_id: String) -> Result<(), String> {
             }
             config.rpc_servers[idx].is_default = true;
             config.default_rpc_index = idx;
+            found = true;
             break;
         }
+    }
+    
+    if !found {
+        return Err(format!("RPC server with id '{}' not found", server_id));
     }
     
     ConfigService::save(&config_path, &config)

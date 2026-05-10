@@ -5,14 +5,11 @@ import type {
   DownloadLink,
   DownloadTask,
   AppConfig,
-  CredentialConfig,
   RpcServer,
   DownloaderType,
   ProxyConfig,
   Theme,
   TaskStatus,
-  TransferTaskStatus,
-  RpcTaskStatus,
   PaginatedFiles,
 } from '../../src/types'
 
