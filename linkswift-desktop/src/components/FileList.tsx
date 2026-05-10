@@ -4,7 +4,6 @@
  * 展示文件列表，支持选择、全选、反选和展开文件夹操作
  */
 
-import React from 'react'
 import type { FileItem as FileItemType } from '../types'
 import { formatFileSize } from '../lib/utils'
 

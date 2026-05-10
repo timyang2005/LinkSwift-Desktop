@@ -4,7 +4,7 @@
  * 提供夸克网盘分享链接的输入和解析功能
  */
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 
 // 链接输入组件的属性接口
 interface LinkInputProps {

@@ -4,7 +4,7 @@
  * 引导用户完成初始配置，包括登录夸克网盘和配置 RPC 下载器
  */
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 
 // 向导组件的属性接口
 interface FirstRunWizardProps {

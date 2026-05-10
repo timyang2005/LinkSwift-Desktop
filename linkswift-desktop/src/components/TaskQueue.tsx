@@ -4,7 +4,6 @@
  * 展示下载任务列表，显示任务状态和进度，支持重试和删除操作
  */
 
-import React from 'react'
 import type { DownloadTask } from '../types'
 
 // 任务队列组件的属性接口

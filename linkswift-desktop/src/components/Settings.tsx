@@ -4,7 +4,7 @@
  * 提供应用设置界面，包括账号管理和 RPC 下载器配置
  */
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import type { RpcServer } from '../types'
 
 // 设置组件的属性接口
