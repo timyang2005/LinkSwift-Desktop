@@ -6,7 +6,9 @@ use crate::error::AppError;
 use crate::models::config::DownloaderType;
 use serde_json::json;
 
-#[derive(Debug, Clone, PartialEq)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum RpcTaskStatus {
     Active,
     Waiting,

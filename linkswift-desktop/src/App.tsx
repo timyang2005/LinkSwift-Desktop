@@ -34,7 +34,7 @@ function App() {
     setError(null)
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      const result = await invoke<ShareInfo>('parse_share_url', { url })
+      const result = await invoke<ShareInfo>('parse_share_link', { shareUrl: url })
       setShareInfo(result)
     } catch (e) {
       setError(String(e))
@@ -46,7 +46,7 @@ function App() {
   const handleLogin = async (): Promise<boolean> => {
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('login_quark')
+      await invoke('open_login_window')
       return true
     } catch {
       return false
@@ -74,7 +74,10 @@ function App() {
       const { invoke } = await import('@tauri-apps/api/core')
       const result = await invoke<{ items: FileItem[] }>('get_share_files', {
         pwdId: shareInfo.pwd_id,
-        pdirFid: fid,
+        stoken: shareInfo.stoken,
+        dirFid: fid,
+        page: 1,
+        size: 100,
       })
       const newFiles = result.items || []
       setShareInfo({

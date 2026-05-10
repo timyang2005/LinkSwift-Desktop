@@ -15,6 +15,7 @@ fn get_config_path() -> PathBuf {
         .join("linkswift")
 }
 
+#[tauri::command]
 pub async fn parse_share_link(share_url: String) -> Result<ShareInfo, String> {
     let pwd_id = QuarkApi::parse_share_url(&share_url).map_err(|e| e.to_string())?;
 
@@ -27,6 +28,7 @@ pub async fn parse_share_link(share_url: String) -> Result<ShareInfo, String> {
     })
 }
 
+#[tauri::command]
 pub async fn submit_share_password(
     pwd_id: String,
     _stoken: String,
@@ -54,6 +56,7 @@ pub async fn submit_share_password(
     })
 }
 
+#[tauri::command]
 pub async fn get_share_files(
     pwd_id: String,
     stoken: String,
@@ -68,6 +71,7 @@ pub async fn get_share_files(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn transfer_files(
     pwd_id: String,
     stoken: String,
@@ -92,6 +96,7 @@ pub async fn transfer_files(
     .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn query_transfer_task(task_id: String) -> Result<TransferTaskStatus, String> {
     let api = QuarkApi::new("https://drive-pc.quark.cn");
 
@@ -100,12 +105,14 @@ pub async fn query_transfer_task(task_id: String) -> Result<TransferTaskStatus, 
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn get_download_link(fid: String) -> Result<DownloadLink, String> {
     let api = QuarkApi::new("https://drive-pc.quark.cn");
 
     api.get_download_link(&fid).await.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn verify_credential() -> Result<bool, String> {
     let config_path = get_config_path();
     let config = ConfigService::load(&config_path).map_err(|e| e.to_string())?;
@@ -120,6 +127,7 @@ pub async fn verify_credential() -> Result<bool, String> {
     api.verify_credential().await.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn get_user_directories(
     parent_fid: String,
 ) -> Result<Vec<crate::models::file::FileItem>, String> {

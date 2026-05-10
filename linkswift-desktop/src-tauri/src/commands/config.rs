@@ -12,18 +12,21 @@ fn get_config_path() -> PathBuf {
         .join("linkswift")
 }
 
+#[tauri::command]
 pub async fn get_config() -> Result<AppConfig, String> {
     let config_path = get_config_path();
 
     ConfigService::load(&config_path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn save_config(config: AppConfig) -> Result<(), String> {
     let config_path = get_config_path();
 
     ConfigService::save(&config_path, &config).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn add_rpc_server(server: RpcServer) -> Result<(), String> {
     let config_path = get_config_path();
     let mut config = ConfigService::load(&config_path).map_err(|e| e.to_string())?;
@@ -33,6 +36,7 @@ pub async fn add_rpc_server(server: RpcServer) -> Result<(), String> {
     ConfigService::save(&config_path, &config).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn update_rpc_server(server: RpcServer) -> Result<(), String> {
     let config_path = get_config_path();
     let mut config = ConfigService::load(&config_path).map_err(|e| e.to_string())?;
@@ -44,6 +48,7 @@ pub async fn update_rpc_server(server: RpcServer) -> Result<(), String> {
     ConfigService::save(&config_path, &config).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn delete_rpc_server(server_id: String) -> Result<(), String> {
     let config_path = get_config_path();
     let mut config = ConfigService::load(&config_path).map_err(|e| e.to_string())?;
@@ -53,6 +58,7 @@ pub async fn delete_rpc_server(server_id: String) -> Result<(), String> {
     ConfigService::save(&config_path, &config).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn set_default_rpc_server(server_id: String) -> Result<(), String> {
     let config_path = get_config_path();
     let mut config = ConfigService::load(&config_path).map_err(|e| e.to_string())?;

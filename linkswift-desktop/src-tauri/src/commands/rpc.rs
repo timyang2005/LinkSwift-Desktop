@@ -19,6 +19,7 @@ fn get_rpc_server_by_id(server_id: &str) -> Option<RpcServer> {
     config.rpc_servers.into_iter().find(|s| s.id == server_id)
 }
 
+#[tauri::command]
 pub async fn add_download_task(
     rpc_server_id: String,
     urls: Vec<String>,
@@ -40,12 +41,14 @@ pub async fn add_download_task(
     Ok(vec![gid])
 }
 
+#[tauri::command]
 pub async fn test_rpc_connection(url: String, token: Option<String>) -> Result<bool, String> {
     let client = RpcClient::new(&url, token.as_deref());
 
     client.test_connection().await.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
 pub async fn query_rpc_task_status(
     _rpc_server_id: String,
     task_id: String,

@@ -5,10 +5,10 @@
 use crate::error::AppError;
 use crate::models::file::{FileItem, PaginatedFiles};
 use crate::models::task::DownloadLink;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum TransferTaskStatus {
     Pending,
     Running { progress: u32 },

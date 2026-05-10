@@ -11,10 +11,12 @@ fn get_config_path() -> PathBuf {
         .join("linkswift")
 }
 
+#[tauri::command]
 pub async fn open_login_window() -> Result<String, String> {
     Ok("登录窗口已打开".to_string())
 }
 
+#[tauri::command]
 pub async fn verify_credential_status() -> Result<bool, String> {
     let config_path = get_config_path();
     let config = ConfigService::load(&config_path).map_err(|e| e.to_string())?;
