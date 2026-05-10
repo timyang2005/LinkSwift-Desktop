@@ -204,26 +204,28 @@ jobs:
 
       - name: Package portable (Linux/macOS)
         if: runner.os != 'Windows'
+        working-directory: ${{ github.workspace }}
         run: |
           VERSION="${{ needs.create-release.outputs.version }}"
           LABEL="${{ matrix.platform.label }}"
           if [ -n "${{ matrix.platform.target }}" ]; then
-            BINARY_PATH="src-tauri/target/${{ matrix.platform.target }}/release/linkswift-desktop"
+            BINARY_PATH="linkswift-desktop/src-tauri/target/${{ matrix.platform.target }}/release/linkswift-desktop"
           else
-            BINARY_PATH="src-tauri/target/release/linkswift-desktop"
+            BINARY_PATH="linkswift-desktop/src-tauri/target/release/linkswift-desktop"
           fi
           ARCHIVE_NAME="LinkSwift-Desktop_${VERSION}_${LABEL}_portable.tar.gz"
-          cp "$BINARY_PATH" linkswift-desktop
-          tar czf "$ARCHIVE_NAME" linkswift-desktop
+          cp "$BINARY_PATH" "linkswift-desktop-portable"
+          tar czf "$ARCHIVE_NAME" "linkswift-desktop-portable"
           echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
 
       - name: Package portable (Windows)
         if: runner.os == 'Windows'
+        working-directory: ${{ github.workspace }}
         shell: pwsh
         run: |
           $VERSION = "${{ needs.create-release.outputs.version }}"
           $LABEL = "${{ matrix.platform.label }}"
-          $BINARY_PATH = "src-tauri\target\release\linkswift-desktop.exe"
+          $BINARY_PATH = "linkswift-desktop\src-tauri\target\release\linkswift-desktop.exe"
           $ARCHIVE_NAME = "LinkSwift-Desktop_${VERSION}_${LABEL}_portable.zip"
           Compress-Archive -Path $BINARY_PATH -DestinationPath $ARCHIVE_NAME
           echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $env:GITHUB_ENV
