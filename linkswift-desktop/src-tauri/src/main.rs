@@ -11,5 +11,5 @@
 ///
 /// 通过调用 app_lib::run() 启动Tauri应用程序
 fn main() {
-  app_lib::run();
+    app_lib::run();
 }

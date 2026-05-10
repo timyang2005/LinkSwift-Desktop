@@ -2,8 +2,8 @@
 //!
 //! 定义分享链接相关的数据结构
 
-use serde::{Deserialize, Serialize};
 use crate::models::file::FileItem;
+use serde::{Deserialize, Serialize};
 
 /// 分享信息
 ///

@@ -38,12 +38,16 @@ impl RpcClient {
         self
     }
 
-    async fn jsonrpc_call(&self, method: &str, params: Vec<serde_json::Value>) -> Result<serde_json::Value, AppError> {
+    async fn jsonrpc_call(
+        &self,
+        method: &str,
+        params: Vec<serde_json::Value>,
+    ) -> Result<serde_json::Value, AppError> {
         let method_with_token = match &self.token {
-            Some(token) => format!("aria2.{}", method.trim_start_matches("aria2.")),
+            Some(_token) => format!("aria2.{}", method.trim_start_matches("aria2.")),
             None => method.to_string(),
         };
-        
+
         let params_with_token: Vec<serde_json::Value> = match &self.token {
             Some(token) => {
                 let mut p = vec![serde_json::Value::String(token.clone())];
@@ -52,72 +56,88 @@ impl RpcClient {
             }
             None => params,
         };
-        
+
         let request = json!({
             "jsonrpc": "2.0",
             "id": 1,
             "method": method_with_token,
             "params": params_with_token
         });
-        
-        let response = self.client
+
+        let response = self
+            .client
             .post(&self.url)
             .header("Content-Type", "application/json")
             .json(&request)
             .send()
             .await
             .map_err(|e| AppError::RpcConnectionFailed(e.to_string()))?;
-        
+
         let status = response.status();
         if !status.is_success() && status.as_u16() != 200 {
             return Err(AppError::RpcConnectionFailed(format!("HTTP {}", status)));
         }
-        
-        let body: serde_json::Value = response.json().await
+
+        let body: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| AppError::NetworkError(e.to_string()))?;
-        
+
         if let Some(error) = body.get("error") {
-            let message = error.get("message")
+            let message = error
+                .get("message")
                 .and_then(|m| m.as_str())
                 .unwrap_or("Unknown error")
                 .to_string();
             return Err(AppError::RpcConnectionFailed(message));
         }
-        
+
         body.get("result")
             .cloned()
             .ok_or_else(|| AppError::RpcConnectionFailed("No result in response".to_string()))
     }
 
-    pub async fn add_uri(&self, urls: Vec<&str>, _filename: &str, dir: Option<&str>) -> Result<String, AppError> {
+    pub async fn add_uri(
+        &self,
+        urls: Vec<&str>,
+        _filename: &str,
+        dir: Option<&str>,
+    ) -> Result<String, AppError> {
         let mut options = serde_json::Map::new();
-        
+
         if let Some(directory) = dir {
-            options.insert("dir".to_string(), serde_json::Value::String(directory.to_string()));
+            options.insert(
+                "dir".to_string(),
+                serde_json::Value::String(directory.to_string()),
+            );
         }
-        
+
         let params = vec![
-            serde_json::Value::Array(urls.into_iter().map(|u| serde_json::Value::String(u.to_string())).collect()),
+            serde_json::Value::Array(
+                urls.into_iter()
+                    .map(|u| serde_json::Value::String(u.to_string()))
+                    .collect(),
+            ),
             serde_json::Value::Object(options),
         ];
-        
+
         let result = self.jsonrpc_call("aria2.addUri", params).await?;
-        
-        result.as_str()
+
+        result
+            .as_str()
             .map(|s| s.to_string())
             .ok_or_else(|| AppError::RpcConnectionFailed("Expected string result".to_string()))
     }
 
     pub async fn test_connection(&self) -> Result<bool, AppError> {
         match self.downloader_type {
-            DownloaderType::Aria2 => {
-                match self.jsonrpc_call("aria2.getVersion", vec![]).await {
-                    Ok(_) => Ok(true),
-                    Err(_) => Ok(false),
-                }
-            }
+            DownloaderType::Aria2 => match self.jsonrpc_call("aria2.getVersion", vec![]).await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
             DownloaderType::BitComet => {
-                match self.client
+                match self
+                    .client
                     .post(&self.url)
                     .header("Content-Type", "application/json")
                     .json(&json!({"method": "server.ver", "params": [], "id": 1}))
@@ -128,24 +148,23 @@ impl RpcClient {
                     Err(_) => Ok(false),
                 }
             }
-            _ => {
-                match self.jsonrpc_call("aria2.getVersion", vec![]).await {
-                    Ok(_) => Ok(true),
-                    Err(_) => Ok(false),
-                }
-            }
+            _ => match self.jsonrpc_call("aria2.getVersion", vec![]).await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
         }
     }
 
     pub async fn query_task_status(&self, task_id: &str) -> Result<RpcTaskStatus, AppError> {
         let params = vec![serde_json::Value::String(task_id.to_string())];
-        
+
         match self.jsonrpc_call("aria2.tellStatus", params).await {
             Ok(result) => {
-                let status = result.get("status")
+                let status = result
+                    .get("status")
                     .and_then(|s| s.as_str())
                     .unwrap_or("active");
-                
+
                 match status {
                     "active" => Ok(RpcTaskStatus::Active),
                     "waiting" => Ok(RpcTaskStatus::Waiting),
@@ -153,7 +172,8 @@ impl RpcClient {
                     "complete" => Ok(RpcTaskStatus::Complete),
                     "removed" => Ok(RpcTaskStatus::Removed),
                     "error" => {
-                        let message = result.get("errorMessage")
+                        let message = result
+                            .get("errorMessage")
                             .and_then(|m| m.as_str())
                             .unwrap_or("Unknown error")
                             .to_string();

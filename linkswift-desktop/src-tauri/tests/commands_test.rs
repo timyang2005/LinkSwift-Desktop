@@ -2,10 +2,9 @@ use pretty_assertions::assert_eq;
 
 #[tokio::test]
 async fn command_parse_share_link_valid_url() {
-    let result = app_lib::commands::quark::parse_share_link(
-        "https://pan.quark.cn/s/abc123".to_string(),
-    )
-    .await;
+    let result =
+        app_lib::commands::quark::parse_share_link("https://pan.quark.cn/s/abc123".to_string())
+            .await;
     assert!(result.is_ok(), "valid URL should parse successfully");
     let info = result.unwrap();
     assert_eq!(info.pwd_id, "abc123");
@@ -13,10 +12,9 @@ async fn command_parse_share_link_valid_url() {
 
 #[tokio::test]
 async fn command_parse_share_link_invalid_url() {
-    let result = app_lib::commands::quark::parse_share_link(
-        "https://example.com/not-quark".to_string(),
-    )
-    .await;
+    let result =
+        app_lib::commands::quark::parse_share_link("https://example.com/not-quark".to_string())
+            .await;
     assert!(result.is_err(), "invalid URL should return error");
 }
 
@@ -114,8 +112,7 @@ async fn command_verify_credential() {
 #[tokio::test]
 #[ignore]
 async fn command_get_user_directories() {
-    let result =
-        app_lib::commands::quark::get_user_directories("0".to_string()).await;
+    let result = app_lib::commands::quark::get_user_directories("0".to_string()).await;
     assert!(result.is_ok());
 }
 
@@ -134,11 +131,9 @@ async fn command_add_download_task() {
 
 #[tokio::test]
 async fn command_test_rpc_connection() {
-    let result = app_lib::commands::rpc::test_rpc_connection(
-        "http://localhost:6800".to_string(),
-        None,
-    )
-    .await;
+    let result =
+        app_lib::commands::rpc::test_rpc_connection("http://localhost:6800".to_string(), None)
+            .await;
     assert!(result.is_ok());
 }
 
@@ -155,11 +150,9 @@ async fn command_test_rpc_connection_with_token() {
 #[tokio::test]
 #[ignore]
 async fn command_query_rpc_task_status() {
-    let result = app_lib::commands::rpc::query_rpc_task_status(
-        "srv1".to_string(),
-        "gid123".to_string(),
-    )
-    .await;
+    let result =
+        app_lib::commands::rpc::query_rpc_task_status("srv1".to_string(), "gid123".to_string())
+            .await;
     assert!(result.is_ok());
 }
 
@@ -226,8 +219,9 @@ async fn command_set_default_rpc_server() {
         is_default: false,
     };
     let _ = app_lib::commands::config::add_rpc_server(server).await;
-    
-    let result = app_lib::commands::config::set_default_rpc_server("test_srv_default".to_string()).await;
+
+    let result =
+        app_lib::commands::config::set_default_rpc_server("test_srv_default".to_string()).await;
     assert!(result.is_ok());
 }
 

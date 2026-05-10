@@ -9,8 +9,8 @@
 //! - config_service: 配置文件服务
 //! - task_queue: 任务队列管理服务
 
+pub mod config_service;
+pub mod crypto;
 pub mod quark_api;
 pub mod rpc_client;
-pub mod crypto;
-pub mod config_service;
 pub mod task_queue;

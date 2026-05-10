@@ -1,7 +1,4 @@
 use app_lib::services::quark_api::{QuarkApi, TransferTaskStatus};
-use app_lib::models::file::PaginatedFiles;
-use app_lib::models::task::DownloadLink;
-use app_lib::error::AppError;
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -66,7 +63,8 @@ fn parse_share_url_http_redirect() {
 #[tokio::test]
 async fn get_share_token_success() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/share/sharepage/token")
+    let _mock = server
+        .mock("POST", "/1/clouddrive/share/sharepage/token")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":{"stoken":"test_stoken_123"}}"#)
@@ -77,14 +75,17 @@ async fn get_share_token_success() {
     let result = api.get_share_token("abc123", None).await;
     assert!(result.is_ok(), "get_share_token should succeed");
     assert_eq!(result.unwrap(), "test_stoken_123");
-    mock.assert_async().await;
+    _mock.assert_async().await;
 }
 
 #[tokio::test]
 async fn get_share_token_with_password() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/share/sharepage/token")
-        .match_body(mockito::Matcher::JsonString(r#"{"pwd_id":"abc123","passcode":"1234"}"#.to_string()))
+    let _mock = server
+        .mock("POST", "/1/clouddrive/share/sharepage/token")
+        .match_body(mockito::Matcher::JsonString(
+            r#"{"pwd_id":"abc123","passcode":"1234"}"#.to_string(),
+        ))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":{"stoken":"pwd_stoken"}}"#)
@@ -100,7 +101,8 @@ async fn get_share_token_with_password() {
 #[tokio::test]
 async fn get_share_token_expired_link() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/share/sharepage/token")
+    let _mock = server
+        .mock("POST", "/1/clouddrive/share/sharepage/token")
         .with_status(403)
         .with_header("content-type", "application/json")
         .with_body(r#"{"code":403,"message":"分享已失效"}"#)
@@ -115,7 +117,8 @@ async fn get_share_token_expired_link() {
 #[tokio::test]
 async fn get_share_token_wrong_password() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/share/sharepage/token")
+    let _mock = server
+        .mock("POST", "/1/clouddrive/share/sharepage/token")
         .with_status(400)
         .with_header("content-type", "application/json")
         .with_body(r#"{"code":400,"message":"提取码错误"}"#)
@@ -130,7 +133,7 @@ async fn get_share_token_wrong_password() {
 #[tokio::test]
 async fn get_share_files_returns_file_list() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/share/sharepage/detail.*".to_string()))
+    let _mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/share/sharepage/detail.*".to_string()))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{
@@ -161,7 +164,7 @@ async fn get_share_files_returns_file_list() {
 #[tokio::test]
 async fn get_share_files_sub_directory() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/share/sharepage/detail.*".to_string()))
+    let _mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/share/sharepage/detail.*".to_string()))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{
@@ -189,10 +192,15 @@ async fn get_share_files_sub_directory() {
 #[tokio::test]
 async fn get_share_files_paginated_has_more() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/share/sharepage/detail.*".to_string()))
+    let _mock = server
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/1/clouddrive/share/sharepage/detail.*".to_string()),
+        )
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "data": {
                 "list": [],
                 "total_count": 100,
@@ -200,7 +208,8 @@ async fn get_share_files_paginated_has_more() {
                 "page_size": 50,
                 "has_more": true
             }
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -215,7 +224,11 @@ async fn get_share_files_paginated_has_more() {
 #[tokio::test]
 async fn get_share_files_unauthorized() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/share/sharepage/detail.*".to_string()))
+    let _mock = server
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/1/clouddrive/share/sharepage/detail.*".to_string()),
+        )
         .with_status(401)
         .with_body(r#"{"code":401,"message":"未授权"}"#)
         .create_async()
@@ -229,7 +242,8 @@ async fn get_share_files_unauthorized() {
 #[tokio::test]
 async fn transfer_files_returns_task_id() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/share/sharepage/save")
+    let _mock = server
+        .mock("POST", "/1/clouddrive/share/sharepage/save")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":{"task_id":"task-001"}}"#)
@@ -237,13 +251,15 @@ async fn transfer_files_returns_task_id() {
         .await;
 
     let api = QuarkApi::new(&server.url());
-    let result = api.transfer_files(
-        "abc123",
-        "stoken",
-        &["f1".to_string()],
-        &["tok1".to_string()],
-        "0",
-    ).await;
+    let result = api
+        .transfer_files(
+            "abc123",
+            "stoken",
+            &["f1".to_string()],
+            &["tok1".to_string()],
+            "0",
+        )
+        .await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "task-001");
 }
@@ -251,7 +267,8 @@ async fn transfer_files_returns_task_id() {
 #[tokio::test]
 async fn transfer_files_multiple_files() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/share/sharepage/save")
+    let _mock = server
+        .mock("POST", "/1/clouddrive/share/sharepage/save")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":{"task_id":"task-002"}}"#)
@@ -259,53 +276,56 @@ async fn transfer_files_multiple_files() {
         .await;
 
     let api = QuarkApi::new(&server.url());
-    let result = api.transfer_files(
-        "abc123",
-        "stoken",
-        &["f1".to_string(), "f2".to_string()],
-        &["tok1".to_string(), "tok2".to_string()],
-        "target_dir",
-    ).await;
+    let result = api
+        .transfer_files(
+            "abc123",
+            "stoken",
+            &["f1".to_string(), "f2".to_string()],
+            &["tok1".to_string(), "tok2".to_string()],
+            "target_dir",
+        )
+        .await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn transfer_files_empty_fid_list_returns_error() {
     let api = QuarkApi::new("http://unused.example.com");
-    let result = api.transfer_files(
-        "abc123",
-        "stoken",
-        &[],
-        &[],
-        "0",
-    ).await;
+    let result = api.transfer_files("abc123", "stoken", &[], &[], "0").await;
     assert!(result.is_err(), "empty fid list should return error");
 }
 
 #[tokio::test]
 async fn transfer_files_server_error() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/share/sharepage/save")
+    let _mock = server
+        .mock("POST", "/1/clouddrive/share/sharepage/save")
         .with_status(500)
         .with_body(r#"{"code":500,"message":"服务器内部错误"}"#)
         .create_async()
         .await;
 
     let api = QuarkApi::new(&server.url());
-    let result = api.transfer_files(
-        "abc123",
-        "stoken",
-        &["f1".to_string()],
-        &["tok1".to_string()],
-        "0",
-    ).await;
+    let result = api
+        .transfer_files(
+            "abc123",
+            "stoken",
+            &["f1".to_string()],
+            &["tok1".to_string()],
+            "0",
+        )
+        .await;
     assert!(result.is_err());
 }
 
 #[tokio::test]
 async fn query_transfer_task_completed() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/task.*".to_string()))
+    let _mock = server
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/1/clouddrive/task.*".to_string()),
+        )
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":{"status":2,"new_fids":["new_f1","new_f2"]}}"#)
@@ -326,7 +346,11 @@ async fn query_transfer_task_completed() {
 #[tokio::test]
 async fn query_transfer_task_in_progress() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/task.*".to_string()))
+    let _mock = server
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/1/clouddrive/task.*".to_string()),
+        )
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":{"status":1,"progress":67}}"#)
@@ -347,7 +371,11 @@ async fn query_transfer_task_in_progress() {
 #[tokio::test]
 async fn query_transfer_task_failed() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/task.*".to_string()))
+    let _mock = server
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/1/clouddrive/task.*".to_string()),
+        )
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":{"status":3,"failed_reason":"空间不足"}}"#)
@@ -368,10 +396,12 @@ async fn query_transfer_task_failed() {
 #[tokio::test]
 async fn get_download_link_returns_url() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/file/download")
+    let _mock = server
+        .mock("POST", "/1/clouddrive/file/download")
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "data": [{
                 "fid": "fid1",
                 "name": "movie.mp4",
@@ -380,7 +410,8 @@ async fn get_download_link_returns_url() {
                 "md5": "abc123",
                 "expires_in": 3600
             }]
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -397,7 +428,8 @@ async fn get_download_link_returns_url() {
 #[tokio::test]
 async fn get_download_link_invalid_fid() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/1/clouddrive/file/download")
+    let _mock = server
+        .mock("POST", "/1/clouddrive/file/download")
         .with_status(404)
         .with_body(r#"{"code":404,"message":"文件不存在"}"#)
         .create_async()
@@ -411,7 +443,11 @@ async fn get_download_link_invalid_fid() {
 #[tokio::test]
 async fn verify_credential_valid() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/file/sort.*".to_string()))
+    let _mock = server
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/1/clouddrive/file/sort.*".to_string()),
+        )
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":{"list":[]}}"#)
@@ -427,7 +463,11 @@ async fn verify_credential_valid() {
 #[tokio::test]
 async fn verify_credential_expired() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/file/sort.*".to_string()))
+    let _mock = server
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/1/clouddrive/file/sort.*".to_string()),
+        )
         .with_status(401)
         .with_body(r#"{"code":401,"message":"未授权"}"#)
         .create_async()
@@ -442,7 +482,7 @@ async fn verify_credential_expired() {
 #[tokio::test]
 async fn get_user_directories_returns_list() {
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/file/sort.*".to_string()))
+    let _mock = server.mock("GET", mockito::Matcher::Regex(r"/1/clouddrive/file/sort.*".to_string()))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{

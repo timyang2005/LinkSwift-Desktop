@@ -6,10 +6,10 @@
 //! - RPC下载任务管理
 //! - 配置管理与加密服务
 
-pub mod models;
 pub mod commands;
-pub mod services;
 pub mod error;
+pub mod models;
+pub mod services;
 
 /// Tauri应用程序入口函数
 ///

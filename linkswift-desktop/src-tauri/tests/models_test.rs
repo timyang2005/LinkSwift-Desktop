@@ -1,9 +1,9 @@
+use app_lib::models::config::{
+    AppConfig, CredentialConfig, DownloaderType, ProxyConfig, RpcServer, Theme,
+};
 use app_lib::models::file::{FileItem, PaginatedFiles};
 use app_lib::models::share::{ShareInfo, ShareTokenRequest, ShareTokenResponse};
-use app_lib::models::config::{
-    AppConfig, CredentialConfig, RpcServer, DownloaderType, ProxyConfig, Theme,
-};
-use app_lib::models::task::{DownloadTask, DownloadLink, TaskStatus};
+use app_lib::models::task::{DownloadLink, DownloadTask, TaskStatus};
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -318,9 +318,12 @@ fn task_status_failed_with_reason() {
     let json = serde_json::to_string(&status).unwrap();
     assert!(json.contains("Cookie expired"));
     let parsed: TaskStatus = serde_json::from_str(&json).unwrap();
-    assert_eq!(parsed, TaskStatus::Failed {
-        reason: "Cookie expired".to_string(),
-    });
+    assert_eq!(
+        parsed,
+        TaskStatus::Failed {
+            reason: "Cookie expired".to_string(),
+        }
+    );
 }
 
 #[test]
@@ -332,7 +335,9 @@ fn task_status_all_variants_roundtrip() {
         TaskStatus::FetchingLink,
         TaskStatus::Pushing,
         TaskStatus::Completed,
-        TaskStatus::Failed { reason: "error".to_string() },
+        TaskStatus::Failed {
+            reason: "error".to_string(),
+        },
         TaskStatus::Cancelled,
     ];
     for status in &statuses {
@@ -413,7 +418,9 @@ fn download_task_failed_with_error_message() {
         id: "task-002".to_string(),
         share_url: "https://pan.quark.cn/s/xyz".to_string(),
         files: vec![],
-        status: TaskStatus::Failed { reason: "转存失败: 空间不足".to_string() },
+        status: TaskStatus::Failed {
+            reason: "转存失败: 空间不足".to_string(),
+        },
         target_dir: "0".to_string(),
         rpc_server_id: "srv1".to_string(),
         created_at: 1700000000,

@@ -27,7 +27,7 @@ impl TaskQueue {
                 task.id
             )));
         }
-        
+
         for existing_task in self.tasks.values() {
             if matches!(existing_task.status, TaskStatus::Failed { .. }) {
                 continue;
@@ -39,7 +39,7 @@ impl TaskQueue {
                 )));
             }
         }
-        
+
         self.tasks.insert(task.id.clone(), task);
         Ok(())
     }
@@ -88,12 +88,10 @@ impl TaskQueue {
         Ok(self
             .tasks
             .values()
-            .filter(|task| {
-                match (&task.status, &status) {
-                    (TaskStatus::Transferring { .. }, TaskStatus::Transferring { .. }) => true,
-                    (TaskStatus::Failed { .. }, TaskStatus::Failed { .. }) => true,
-                    _ => task.status == status,
-                }
+            .filter(|task| match (&task.status, &status) {
+                (TaskStatus::Transferring { .. }, TaskStatus::Transferring { .. }) => true,
+                (TaskStatus::Failed { .. }, TaskStatus::Failed { .. }) => true,
+                _ => task.status == status,
             })
             .cloned()
             .collect())
@@ -124,8 +122,9 @@ impl TaskQueue {
             .values()
             .filter(|task| matches!(task.status, TaskStatus::Completed))
             .count();
-        
-        self.tasks.retain(|_, task| !matches!(task.status, TaskStatus::Completed));
+
+        self.tasks
+            .retain(|_, task| !matches!(task.status, TaskStatus::Completed));
         Ok(count)
     }
 

@@ -8,7 +8,7 @@
 //! - config: 配置管理命令
 //! - auth: 认证相关命令
 
+pub mod auth;
+pub mod config;
 pub mod quark;
 pub mod rpc;
-pub mod config;
-pub mod auth;

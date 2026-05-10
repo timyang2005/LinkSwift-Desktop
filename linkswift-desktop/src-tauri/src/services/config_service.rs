@@ -2,8 +2,8 @@
 //!
 //! 负责应用程序配置的读取和保存
 
-use crate::models::config::AppConfig;
 use crate::error::AppError;
+use crate::models::config::AppConfig;
 
 /// 配置服务
 ///

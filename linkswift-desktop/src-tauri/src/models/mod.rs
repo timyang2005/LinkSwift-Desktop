@@ -8,7 +8,7 @@
 //! - config: 配置相关模型
 //! - task: 任务相关模型
 
+pub mod config;
 pub mod file;
 pub mod share;
-pub mod config;
 pub mod task;

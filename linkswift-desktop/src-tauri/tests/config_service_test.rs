@@ -1,9 +1,8 @@
 use app_lib::models::config::{
-    AppConfig, CredentialConfig, RpcServer, DownloaderType, ProxyConfig, Theme,
+    AppConfig, CredentialConfig, DownloaderType, ProxyConfig, RpcServer, Theme,
 };
 use app_lib::services::config_service::ConfigService;
 use app_lib::services::crypto::CryptoService;
-use app_lib::error::AppError;
 use pretty_assertions::assert_eq;
 
 fn create_test_config() -> AppConfig {
@@ -74,8 +73,12 @@ fn config_service_save_overwrites_existing() {
 fn config_service_save_with_rpc_servers() {
     let dir = tempfile::tempdir().unwrap();
     let mut config = create_test_config();
-    config.rpc_servers.push(create_test_rpc_server("Aria2", "http://localhost:6800"));
-    config.rpc_servers.push(create_test_rpc_server("BC", "http://localhost:8888"));
+    config
+        .rpc_servers
+        .push(create_test_rpc_server("Aria2", "http://localhost:6800"));
+    config
+        .rpc_servers
+        .push(create_test_rpc_server("BC", "http://localhost:8888"));
     ConfigService::save(dir.path(), &config).unwrap();
 
     let loaded = ConfigService::load(dir.path()).unwrap();
@@ -174,9 +177,15 @@ fn rpc_server_add_to_config() {
 #[test]
 fn rpc_server_add_multiple() {
     let mut config = create_test_config();
-    config.rpc_servers.push(create_test_rpc_server("Aria2", "http://localhost:6800"));
-    config.rpc_servers.push(create_test_rpc_server("BitComet", "http://localhost:8888"));
-    config.rpc_servers.push(create_test_rpc_server("ABDM", "http://localhost:9999"));
+    config
+        .rpc_servers
+        .push(create_test_rpc_server("Aria2", "http://localhost:6800"));
+    config
+        .rpc_servers
+        .push(create_test_rpc_server("BitComet", "http://localhost:8888"));
+    config
+        .rpc_servers
+        .push(create_test_rpc_server("ABDM", "http://localhost:9999"));
     assert_eq!(config.rpc_servers.len(), 3);
 }
 
@@ -193,7 +202,9 @@ fn rpc_server_delete_by_id() {
 #[test]
 fn rpc_server_delete_nonexistent_id_no_effect() {
     let mut config = create_test_config();
-    config.rpc_servers.push(create_test_rpc_server("Aria2", "http://localhost:6800"));
+    config
+        .rpc_servers
+        .push(create_test_rpc_server("Aria2", "http://localhost:6800"));
     config.rpc_servers.retain(|s| s.id != "nonexistent");
     assert_eq!(config.rpc_servers.len(), 1);
 }
@@ -201,8 +212,12 @@ fn rpc_server_delete_nonexistent_id_no_effect() {
 #[test]
 fn rpc_server_set_default() {
     let mut config = create_test_config();
-    config.rpc_servers.push(create_test_rpc_server("Aria2", "http://localhost:6800"));
-    config.rpc_servers.push(create_test_rpc_server("BC", "http://localhost:8888"));
+    config
+        .rpc_servers
+        .push(create_test_rpc_server("Aria2", "http://localhost:6800"));
+    config
+        .rpc_servers
+        .push(create_test_rpc_server("BC", "http://localhost:8888"));
 
     for s in &mut config.rpc_servers {
         s.is_default = false;
