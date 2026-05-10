@@ -13,6 +13,9 @@ jobs:
   frontend-test:
     name: Frontend Test (Node.js ${{ matrix.node }})
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linkswift-desktop
     strategy:
       matrix:
         node: ['20', '22']
@@ -30,6 +33,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: 'pnpm'
+          cache-dependency-path: linkswift-desktop/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -46,6 +50,9 @@ jobs:
   rust-test:
     name: Rust Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linkswift-desktop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,24 +82,27 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v4
         with:
-          path: src-tauri/target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('src-tauri/Cargo.lock') }}
+          path: linkswift-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('linkswift-desktop/src-tauri/Cargo.lock') }}
 
       - name: Check formatting
-        working-directory: src-tauri
+        working-directory: linkswift-desktop/src-tauri
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        working-directory: src-tauri
+        working-directory: linkswift-desktop/src-tauri
         run: cargo clippy -- -D warnings
 
       - name: Run tests
-        working-directory: src-tauri
+        working-directory: linkswift-desktop/src-tauri
         run: cargo test -- --nocapture
 
   rust-test-windows:
     name: Rust Test (Windows)
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: linkswift-desktop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -105,16 +115,19 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v4
         with:
-          path: src-tauri/target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('src-tauri/Cargo.lock') }}
+          path: linkswift-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('linkswift-desktop/src-tauri/Cargo.lock') }}
 
       - name: Run tests
-        working-directory: src-tauri
+        working-directory: linkswift-desktop/src-tauri
         run: cargo test -- --nocapture
 
   rust-test-macos:
     name: Rust Test (macOS)
     runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: linkswift-desktop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -130,9 +143,9 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v4
         with:
-          path: src-tauri/target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('src-tauri/Cargo.lock') }}
+          path: linkswift-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('linkswift-desktop/src-tauri/Cargo.lock') }}
 
       - name: Run tests
-        working-directory: src-tauri
+        working-directory: linkswift-desktop/src-tauri
         run: cargo test -- --nocapture
